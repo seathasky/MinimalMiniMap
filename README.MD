@@ -1,5 +1,5 @@
-# MinimalMinimap
-![https://media.forgecdn.net/attachments/1344/172/preview.png](https://media.forgecdn.net/attachments/1344/172/preview.png "https://media.forgecdn.net/attachments/1344/172/preview.png")
+# MinimalMiniMap
+![https://media.forgecdn.net/attachments/thumbnails/1344/323/310/172/5.png](https://media.forgecdn.net/attachments/thumbnails/1344/323/310/172/5.png "hhttps://media.forgecdn.net/attachments/thumbnails/1344/323/310/172/5.png")
 
 A lightweight addon that replaces the default World of Warcraft minimap with a clean, square version.
 
