@@ -22,6 +22,22 @@ function MinimalMiniMap:CreateGUI()
     if state.guiFrame then return state.guiFrame end
 
     local db = getDB()
+    local media = self:GetMedia()
+    local fontPath = media and media.font
+
+    local function applyFont(fontString, size)
+        if not fontString or not fontPath then return end
+        fontString:SetFont(fontPath, size, "OUTLINE")
+    end
+
+    local function applySliderFonts(slider, textSize)
+        if not slider then return end
+        local name = slider:GetName()
+        if not name then return end
+        applyFont(_G[name .. "Low"], textSize - 1)
+        applyFont(_G[name .. "High"], textSize - 1)
+        applyFont(_G[name .. "Text"], textSize)
+    end
 
     local frame = CreateFrame("Frame", "MinimalMiniMapGUI", UIParent)
     frame:SetSize(200, 440)
@@ -49,6 +65,7 @@ function MinimalMiniMap:CreateGUI()
     frame.title:SetPoint("TOP", 0, -8)
     frame.title:SetText(self.name)
     frame.title:SetTextColor(0.8, 0.8, 0.8)
+    applyFont(frame.title, 16)
 
     -- Close button
     local closeBtn = CreateFrame("Button", nil, frame)
@@ -64,6 +81,7 @@ function MinimalMiniMap:CreateGUI()
     minimapHeader:SetPoint("TOPLEFT", 10, -30)
     minimapHeader:SetText("MINIMAP")
     minimapHeader:SetTextColor(0.5, 0.9, 0.5)
+    applyFont(minimapHeader, 12)
 
     -- Scale Slider
     local scaleSlider = CreateFrame("Slider", "MMMScaleSlider", frame, "OptionsSliderTemplate")
@@ -77,6 +95,7 @@ function MinimalMiniMap:CreateGUI()
     MMMScaleSliderHigh:SetText("2")
     MMMScaleSliderText:SetText("Scale: " .. db.MM_SCALE)
     MMMScaleSliderText:SetTextColor(0.9, 0.9, 0.9)
+    applySliderFonts(scaleSlider, 12)
     scaleSlider:SetScript("OnValueChanged", function(_, value)
         value = formatScale(value)
         db.MM_SCALE = value
@@ -96,6 +115,7 @@ function MinimalMiniMap:CreateGUI()
     MMMOpacitySliderHigh:SetText("1")
     MMMOpacitySliderText:SetText("Border Opacity: " .. db.BORDER_OPACITY)
     MMMOpacitySliderText:SetTextColor(0.9, 0.9, 0.9)
+    applySliderFonts(opacitySlider, 12)
     opacitySlider:SetScript("OnValueChanged", function(_, value)
         value = formatScale(value)
         db.BORDER_OPACITY = value
@@ -115,6 +135,7 @@ function MinimalMiniMap:CreateGUI()
     MMMZoneTextYSliderHigh:SetText("50")
     MMMZoneTextYSliderText:SetText("Zone Text Position: " .. db.ZONE_TEXT_Y)
     MMMZoneTextYSliderText:SetTextColor(0.9, 0.9, 0.9)
+    applySliderFonts(zoneTextYSlider, 12)
     zoneTextYSlider:SetScript("OnValueChanged", function(_, value)
         value = math.floor(value + 0.5)
         db.ZONE_TEXT_Y = value
@@ -134,6 +155,7 @@ function MinimalMiniMap:CreateGUI()
     MMMZoneFontSliderHigh:SetText("24")
     MMMZoneFontSliderText:SetText("Zone Font Size: " .. db.ZONE_TEXT_FONT_SIZE)
     MMMZoneFontSliderText:SetTextColor(0.9, 0.9, 0.9)
+    applySliderFonts(zoneFontSlider, 12)
     zoneFontSlider:SetScript("OnValueChanged", function(_, value)
         value = math.floor(value + 0.5)
         db.ZONE_TEXT_FONT_SIZE = value
@@ -152,6 +174,7 @@ function MinimalMiniMap:CreateGUI()
     MMMClockYSliderHigh:SetText("50")
     MMMClockYSliderText:SetText("Clock Text Position: " .. db.CLOCK_Y)
     MMMClockYSliderText:SetTextColor(0.9, 0.9, 0.9)
+    applySliderFonts(clockYSlider, 12)
     clockYSlider:SetScript("OnValueChanged", function(_, value)
         value = math.floor(value + 0.5)
         db.CLOCK_Y = value
@@ -170,6 +193,7 @@ function MinimalMiniMap:CreateGUI()
     MMMClockFontSliderHigh:SetText("24")
     MMMClockFontSliderText:SetText("Clock Font Size: " .. db.CLOCK_FONT_SIZE)
     MMMClockFontSliderText:SetTextColor(0.9, 0.9, 0.9)
+    applySliderFonts(clockFontSlider, 12)
     clockFontSlider:SetScript("OnValueChanged", function(_, value)
         value = math.floor(value + 0.5)
         db.CLOCK_FONT_SIZE = value
@@ -185,6 +209,7 @@ function MinimalMiniMap:CreateGUI()
         check.text = check:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         check.text:SetPoint("LEFT", check, "RIGHT", 0, 0)
         check.text:SetText(label)
+        applyFont(check.text, 12)
         check:SetScript("OnClick", function(self)
             local checked = self:GetChecked() and true or false
             db[dbKey] = checked
@@ -204,6 +229,7 @@ function MinimalMiniMap:CreateGUI()
     buffsHeader:SetPoint("TOPLEFT", unlockCheck, "BOTTOMLEFT", 5, -12)
     buffsHeader:SetText("BUFFS")
     buffsHeader:SetTextColor(0.9, 0.7, 0.3)
+    applyFont(buffsHeader, 12)
 
     local buffUnlockCheck = createCheckButton("Unlock Buff Panel", buffsHeader, -5, -8, "BUFF_UNLOCKED", MinimalMiniMap.ApplyBuffUnlockState, "buffs")
 
