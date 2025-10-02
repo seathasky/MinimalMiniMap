@@ -1,8 +1,11 @@
 ## Interface: 11507
 ## Title: MinimalMiniMap
 ## Author: Seathasky
-## Version: 1.0
+## Version: 1.1
 ## Notes: Just a simple minimap for classic
 ## SavedVariables: MinimalMiniMapDB
 
 MinimalMiniMap.lua
+MinimalMiniMap_Minimap.lua
+MinimalMiniMap_Buffs.lua
+MinimalMiniMap_GUI.lua
