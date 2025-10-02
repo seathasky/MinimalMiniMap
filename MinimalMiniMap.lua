@@ -24,10 +24,12 @@ MinimalMiniMap.defaults = {
 	MM_SCALE  = 1.1,
 	BORDER_OPACITY = 0.1,
 	HNS       = true,
-	ZONE_TEXT_Y = 2,
-	ZONE_TEXT_FONT_SIZE = 11,
-	CLOCK_Y = -2,
-	CLOCK_FONT_SIZE = 12,
+	ZONE_TEXT_Y = 6,
+	ZONE_TEXT_FONT_SIZE = 12,
+	CLOCK_Y = -14,
+	CLOCK_FONT_SIZE = 10,
+	CLOCK_BG_OPACITY = 0.5,
+	FONT = "MMM",  -- Options: "MMM", "Friz", "Arial", "Morpheus"
 	POSITION  = {
 		point = "TOPRIGHT",
 		relativePoint = "TOPRIGHT",
@@ -42,6 +44,7 @@ MinimalMiniMap.defaults = {
 		x = -200,
 		y = -10,
 	},
+	BUFF_SCALE = 1.0,
 }
 
 MinimalMiniMap.state = MinimalMiniMap.state or {}
@@ -111,10 +114,6 @@ function MinimalMiniMap:ApplyCore()
 		self:ApplyPosition()
 	end
 
-	if GameTimeFrame then
-		GameTimeFrame:Hide()
-	end
-
 	self:ApplyMask()
 	self:ApplyBorder()
 	self:ApplyButtons()
@@ -122,12 +121,14 @@ function MinimalMiniMap:ApplyCore()
 	self:ApplyNorthTag()
 	self:ApplyZoneText()
 	self:ApplyClock()
+	self:ApplyVisibility()
 
 	GetMinimapShape = function()
 		return "SQUARE"
 	end
 
 	self:DetachBuffsFromMinimap()
+	self:ApplyBuffScale()
 	self:EnableDragging()
 	self:EnableBuffDragging()
 	self:ApplyUnlockState()

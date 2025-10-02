@@ -10,6 +10,23 @@ end
 local state = MinimalMiniMap:GetState()
 state.drag = state.drag or { active = false, offsetX = 0, offsetY = 0 }
 
+local function getFontPath()
+    local db = getDB()
+    local fontChoice = db and db.FONT or "MMM"
+    
+    if fontChoice == "MMM" then
+        return MinimalMiniMap:GetMedia().font
+    elseif fontChoice == "Friz" then
+        return "Fonts\\FRIZQT__.TTF"
+    elseif fontChoice == "Arial" then
+        return "Fonts\\ARIALN.TTF"
+    elseif fontChoice == "Morpheus" then
+        return "Fonts\\MORPHEUS.TTF"
+    else
+        return MinimalMiniMap:GetMedia().font
+    end
+end
+
 function MinimalMiniMap:GetAbsoluteCenter(frame)
     if not frame then return end
     local scale = frame:GetEffectiveScale()
@@ -150,27 +167,47 @@ end
 
 function MinimalMiniMap:ApplyZoneText()
     local db = getDB()
-    local media = self:GetMedia()
     if MinimapZoneTextButton and Minimap and db then
         MinimapZoneTextButton:SetPoint("TOP", Minimap, "TOP", 0, db.ZONE_TEXT_Y or 2)
     end
     if MinimapZoneText then
         local fontSize = db and db.ZONE_TEXT_FONT_SIZE or 11
-        MinimapZoneText:SetFont(media.font, fontSize, "OUTLINE")
+        MinimapZoneText:SetFont(getFontPath(), fontSize, "OUTLINE")
     end
 end
 
 function MinimalMiniMap:ApplyClock()
     local db = getDB()
     local media = self:GetMedia()
+    local state = self:GetState()
+    
     if TimeManagerClockButton and Minimap and db then
         TimeManagerClockButton:SetPoint("BOTTOM", Minimap, "BOTTOM", 0, db.CLOCK_Y or -2)
+        TimeManagerClockButton:SetFrameStrata("HIGH")
+        TimeManagerClockButton:SetFrameLevel(Minimap:GetFrameLevel() + 10)
         local region = TimeManagerClockButton:GetRegions()
         if region then region:Hide() end
+        
+        -- Create background for clock if it doesn't exist
+        if not state.clockBackground then
+            local bg = TimeManagerClockButton:CreateTexture(nil, "BACKGROUND")
+            state.clockBackground = bg
+        end
+        
+        -- Update background opacity and size
+        if TimeManagerClockTicker and state.clockBackground then
+            local bgOpacity = db.CLOCK_BG_OPACITY or 0.5
+            state.clockBackground:SetColorTexture(0, 0, 0, bgOpacity)
+            local width = TimeManagerClockTicker:GetStringWidth() + 8
+            local height = TimeManagerClockTicker:GetStringHeight() + 4
+            state.clockBackground:SetSize(width, height)
+            state.clockBackground:SetPoint("CENTER", TimeManagerClockTicker, "CENTER", 0, 0)
+        end
     end
+    
     if TimeManagerClockTicker then
         local fontSize = db and db.CLOCK_FONT_SIZE or 12
-        TimeManagerClockTicker:SetFont(media.font, fontSize, "OUTLINE")
+        TimeManagerClockTicker:SetFont(getFontPath(), fontSize, "OUTLINE")
     end
 end
 
@@ -282,4 +319,92 @@ function MinimalMiniMap:ApplyUnlockState()
     if guiFrame and guiFrame.unlockCheck then
         guiFrame.unlockCheck:SetChecked(unlocked)
     end
+end
+
+function MinimalMiniMap:ApplyVisibility()
+    -- Always hide unused frames
+    if MiniMapLFGFrame then
+        MiniMapLFGFrame:Hide()
+        MiniMapLFGFrame:SetScript("OnShow", function(self) self:Hide() end)
+    end
+    if GameTimeFrame then
+        GameTimeFrame:Hide()
+        GameTimeFrame:SetScript("OnShow", function(self) self:Hide() end)
+    end
+    
+    -- LFG Eye - bottom left
+    if LFGMinimapFrame then
+        LFGMinimapFrame:SetScale(0.6)
+        LFGMinimapFrame:SetFrameStrata("HIGH")
+        LFGMinimapFrame:SetFrameLevel(Minimap:GetFrameLevel() + 10)
+        LFGMinimapFrame:ClearAllPoints()
+        LFGMinimapFrame:SetPoint("BOTTOMLEFT", Minimap, "BOTTOMLEFT", 2, 2)
+    end
+    
+    -- Tracking Button - hide it
+    local trackingButton = MiniMapTracking or MiniMapTrackingButton
+    if trackingButton then
+        trackingButton:Hide()
+        trackingButton:SetScript("OnShow", function(self) self:Hide() end)
+    end
+    
+    -- Mail Icon - middle right
+    if MiniMapMailFrame then
+        MiniMapMailFrame:SetScale(0.6)
+        MiniMapMailFrame:SetFrameStrata("HIGH")
+        MiniMapMailFrame:SetFrameLevel(Minimap:GetFrameLevel() + 10)
+        MiniMapMailFrame:ClearAllPoints()
+        MiniMapMailFrame:SetPoint("RIGHT", Minimap, "RIGHT", -2, 0)
+    end
+    
+    -- Settings Cogwheel - bottom right
+    self:CreateSettingsButton()
+end
+
+function MinimalMiniMap:CreateSettingsButton()
+    local state = self:GetState()
+    if state.settingsButton then return end
+    
+    local btn = CreateFrame("Button", "MinimalMiniMapSettingsButton", Minimap)
+    btn:SetSize(16, 16)
+    btn:SetScale(0.6)
+    btn:SetPoint("BOTTOMRIGHT", Minimap, "BOTTOMRIGHT", -2, 2)
+    btn:SetFrameStrata("HIGH")
+    btn:SetFrameLevel(Minimap:GetFrameLevel() + 10)
+    
+    -- Background to mask the black
+    local bg = btn:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints()
+    bg:SetColorTexture(0, 0, 0, 0)
+    
+    -- Use the cogwheel texture with transparency
+    local icon = btn:CreateTexture(nil, "ARTWORK")
+    icon:SetAllPoints()
+    icon:SetTexture("Interface\\Icons\\Trade_Engineering")
+    icon:SetTexCoord(0.1, 0.9, 0.1, 0.9)  -- Crop edges to remove black border
+    icon:SetDesaturated(true)  -- Grayscale
+    
+    -- Highlight
+    local highlight = btn:CreateTexture(nil, "HIGHLIGHT")
+    highlight:SetAllPoints()
+    highlight:SetTexture("Interface\\Icons\\Trade_Engineering")
+    highlight:SetTexCoord(0.1, 0.9, 0.1, 0.9)
+    highlight:SetDesaturated(true)  -- Grayscale
+    highlight:SetAlpha(0.5)
+    
+    btn:SetScript("OnClick", function()
+        self:ToggleGUI()
+    end)
+    
+    btn:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+        GameTooltip:SetText("MinimalMiniMap Settings")
+        GameTooltip:Show()
+    end)
+    
+    btn:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
+    
+    state.settingsButton = btn
 end

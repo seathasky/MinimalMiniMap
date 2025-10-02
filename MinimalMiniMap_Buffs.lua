@@ -85,6 +85,15 @@ function MinimalMiniMap:EnableBuffDragging()
     BuffFrame:HookScript("OnHide", finishBuffDrag)
 end
 
+function MinimalMiniMap:ApplyBuffScale()
+    if not BuffFrame then return end
+    local db = getDB()
+    if not db then return end
+    
+    local scale = db.BUFF_SCALE or 1.0
+    BuffFrame:SetScale(scale)
+end
+
 function MinimalMiniMap:ApplyBuffUnlockState()
     if not BuffFrame then return end
     self:EnsureBuffOverlay()
