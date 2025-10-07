@@ -48,7 +48,7 @@ function MinimalMiniMap:CreateGUI()
     end
 
     local frame = CreateFrame("Frame", "MinimalMiniMapGUI", UIParent)
-    frame:SetSize(400, 300)
+    frame:SetSize(400, 380)
     frame:SetPoint("CENTER")
     frame:Hide()
     frame:SetMovable(true)
@@ -149,7 +149,7 @@ function MinimalMiniMap:CreateGUI()
     -- Create scrollable tab containers
     local contentHeights = {
         150,  -- General tab (shorter)
-        450,  -- Minimap tab (7 sliders + 3 section headers)
+        480,  -- Minimap tab (7 sliders + 3 section headers + 1 checkbox)
         120   -- Buffs tab (1 slider + spacing)
     }
     
@@ -479,6 +479,10 @@ function MinimalMiniMap:CreateGUI()
         return check
     end
 
+    -- Show FPS in Clock checkbox
+    local fpsCheck = createCheckButton("Show FPS in Clock", minimapTab, clockBgSlider, 5, -30, "SHOW_FPS", 
+        function(self) self:ApplyClock() end, nil)
+
     -- TAB 3: BUFFS
     local buffsTab = tabContainers[3]
     
@@ -508,6 +512,7 @@ function MinimalMiniMap:CreateGUI()
     state.buffScaleSlider = buffScaleSlider
     frame.unlockCheck = unlockMinimapCheck
     frame.buffUnlockCheck = unlockBuffCheck
+    frame.fpsCheck = fpsCheck
 
     -- Show first tab by default
     switchTab(1)
@@ -563,6 +568,7 @@ StaticPopupDialogs["MINIMALMINIMAP_RESET_ALL"] = {
         db.CLOCK_Y = defaults.CLOCK_Y
         db.CLOCK_FONT_SIZE = defaults.CLOCK_FONT_SIZE
         db.CLOCK_BG_OPACITY = defaults.CLOCK_BG_OPACITY
+        db.SHOW_FPS = defaults.SHOW_FPS
         db.FONT = defaults.FONT
         db.UNLOCKED = defaults.UNLOCKED
         db.POSITION = {
@@ -590,6 +596,9 @@ StaticPopupDialogs["MINIMALMINIMAP_RESET_ALL"] = {
         end
         if state.guiFrame and state.guiFrame.buffUnlockCheck then
             state.guiFrame.buffUnlockCheck:SetChecked(db.BUFF_UNLOCKED)
+        end
+        if state.guiFrame and state.guiFrame.fpsCheck then
+            state.guiFrame.fpsCheck:SetChecked(db.SHOW_FPS)
         end
         
         -- Apply all changes

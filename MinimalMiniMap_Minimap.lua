@@ -209,6 +209,129 @@ function MinimalMiniMap:ApplyClock()
         local fontSize = db and db.CLOCK_FONT_SIZE or 12
         TimeManagerClockTicker:SetFont(getFontPath(), fontSize, "OUTLINE")
     end
+    
+    -- Initialize FPS tracking
+    self:InitializeFPSTracking()
+end
+
+function MinimalMiniMap:InitializeFPSTracking()
+    local state = self:GetState()
+    local db = getDB()
+    
+    if not state.fpsTracker then
+        state.fpsTracker = {
+            frameCount = 0,
+            lastTime = GetTime(),
+            currentFPS = 0,
+            lastUpdate = 0
+        }
+    end
+    
+    -- Stop existing timer if it exists
+    if state.fpsTimer then
+        state.fpsTimer:Cancel()
+        state.fpsTimer = nil
+    end
+    
+    -- Only start FPS tracking if enabled
+    if db and db.SHOW_FPS then
+        -- Create a frame for FPS tracking if it doesn't exist
+        if not state.fpsFrame then
+            state.fpsFrame = CreateFrame("Frame")
+        end
+        
+        -- Set up OnUpdate for FPS tracking
+        state.fpsFrame:SetScript("OnUpdate", function(self, elapsed)
+            MinimalMiniMap:UpdateFPS(elapsed)
+        end)
+        
+        -- Hook SetText to prevent other addons/systems from overriding
+        if not state.clockTextHooked and TimeManagerClockTicker then
+            state.originalSetText = TimeManagerClockTicker.SetText
+            TimeManagerClockTicker.SetText = function(self, text)
+                -- Only allow our FPS text through
+                if db.SHOW_FPS and state.fpsTracker and text and not string.find(text, "FPS") then
+                    local fps = math.floor(state.fpsTracker.currentFPS + 0.5)
+                    text = text .. " - " .. fps .. " FPS"
+                end
+                state.originalSetText(self, text)
+            end
+            state.clockTextHooked = true
+        end
+        
+        -- Initial text update
+        self:UpdateClockText()
+    else
+        -- Stop FPS tracking
+        if state.fpsFrame then
+            state.fpsFrame:SetScript("OnUpdate", nil)
+        end
+        
+        -- Restore original SetText function
+        if state.clockTextHooked and state.originalSetText and TimeManagerClockTicker then
+            TimeManagerClockTicker.SetText = state.originalSetText
+            state.clockTextHooked = false
+        end
+        
+        -- Reset clock text to time only
+        self:UpdateClockText()
+    end
+end
+
+function MinimalMiniMap:UpdateFPS(elapsed)
+    local state = self:GetState()
+    local db = getDB()
+    
+    if not state.fpsTracker or not db.SHOW_FPS then return end
+    
+    local tracker = state.fpsTracker
+    tracker.frameCount = tracker.frameCount + 1
+    tracker.lastUpdate = tracker.lastUpdate + elapsed
+    
+    -- Update FPS every 0.5 seconds
+    if tracker.lastUpdate >= 0.5 then
+        tracker.currentFPS = tracker.frameCount / tracker.lastUpdate
+        tracker.frameCount = 0
+        tracker.lastUpdate = 0
+        
+        -- Update the clock text with FPS
+        self:UpdateClockText()
+    end
+end
+
+function MinimalMiniMap:UpdateClockText()
+    local db = getDB()
+    local state = self:GetState()
+    
+    if not TimeManagerClockTicker or not db then return end
+    
+    -- Get the original time text - try different methods for Classic Era
+    local timeText = ""
+    if GameTime_GetTime then
+        timeText = GameTime_GetTime(false)
+    elseif TimeManagerClockTicker.timeDisplayFormat then
+        -- Fallback: get current time format
+        timeText = date(TimeManagerClockTicker.timeDisplayFormat or "%H:%M")
+    else
+        -- Last resort: simple time format
+        timeText = date("%H:%M")
+    end
+    
+    if db.SHOW_FPS and state.fpsTracker then
+        local fps = math.floor(state.fpsTracker.currentFPS + 0.5)
+        timeText = timeText .. " - " .. fps .. " FPS"
+    end
+    
+    -- Force set the text and ensure it's visible
+    TimeManagerClockTicker:SetText(timeText)
+    TimeManagerClockTicker:Show()
+    
+    -- Update background size if it exists
+    if state.clockBackground then
+        local width = TimeManagerClockTicker:GetStringWidth() + 8
+        local height = TimeManagerClockTicker:GetStringHeight() + 4
+        state.clockBackground:SetSize(width, height)
+    end
 end
 
 function MinimalMiniMap:CreateOverlay(parent, labelText, labelPoint, r, g, b)

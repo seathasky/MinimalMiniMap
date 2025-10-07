@@ -29,6 +29,7 @@ MinimalMiniMap.defaults = {
 	CLOCK_Y = -14,
 	CLOCK_FONT_SIZE = 10,
 	CLOCK_BG_OPACITY = 0.5,
+	SHOW_FPS = false,
 	FONT = "MMM",  -- Options: "MMM", "Friz", "Arial", "Morpheus"
 	POSITION  = {
 		point = "TOPRIGHT",
