@@ -1,19 +1,14 @@
 # MinimalMiniMap
-![https://media.forgecdn.net/attachments/thumbnails/1344/323/310/172/5.png](https://media.forgecdn.net/attachments/thumbnails/1344/323/310/172/5.png "hhttps://media.forgecdn.net/attachments/thumbnails/1344/323/310/172/5.png")
+[![MinimalMiniMap](https://media.forgecdn.net/attachments/thumbnails/1344/323/310/172/5.png)](https://www.curseforge.com/wow/addons/minimalminimap)
 
 A lightweight addon that replaces the default World of Warcraft minimap with a clean, square version.
 
-## Features  
-- Simple square minimap design    
-- Fully scalable (resize to your preference)    
-- Minimalistic look that blends seamlessly with any UI  
+---
 
+## 📦 Installation  
+👉 **[Install via CurseForge](https://www.curseforge.com/wow/addons/minimalminimap)** — *Recommended and easiest method.*
 
-## Options
-Type /mmm in chat for options menu.
-
-## Installation (GitHub)
-
+### Manual Installation (GitHub)
 1. Click the green **Code** button (top-right of this page).  
 2. Select **Download ZIP**.  
 3. Extract the ZIP file.  
@@ -22,4 +17,9 @@ Type /mmm in chat for options menu.
 5. Move the renamed folder to your WoW Classic Era AddOns directory:  
    World of Warcraft\_classic_era_\Interface\AddOns\  
 6. Restart World of Warcraft or reload your UI with `/reload`.  
+
+---
+
+## ⚙️ Options  
+Type `/mmm` in chat to open the options menu.
 
