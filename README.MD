@@ -6,7 +6,7 @@ A lightweight addon that replaces the default World of Warcraft minimap with a c
 ---
 
 ## 📦 Installation  
-👉 **[Install via CurseForge](https://www.curseforge.com/wow/addons/minimalminimap)** — *Recommended and easiest method.*
+👉 **[Install via CurseForge](https://www.curseforge.com/wow/addons/minimalminimap)**
 
 ### Manual Installation (GitHub)
 1. Click the green **Code** button (top-right of this page).  
