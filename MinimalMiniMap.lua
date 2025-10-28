@@ -5,6 +5,8 @@ end
 
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+frame:RegisterEvent("ZONE_CHANGED")
 
 ---@diagnostic disable: undefined-global
 
@@ -148,6 +150,11 @@ frame:SetScript("OnEvent", function(_, event)
 		MinimalMiniMap:InitDB()
 		MinimalMiniMap:ApplyCore()
 		frame:UnregisterEvent(event)
+	elseif event == "ZONE_CHANGED_NEW_AREA" or event == "ZONE_CHANGED" then
+		-- Reapply buff position when changing zones
+		if MinimalMiniMap.DetachBuffsFromMinimap then
+			MinimalMiniMap:DetachBuffsFromMinimap()
+		end
 	end
 end)
 
