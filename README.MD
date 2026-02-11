@@ -1,7 +1,8 @@
 # MinimalMiniMap
 [![MinimalMiniMap](https://media.forgecdn.net/attachments/thumbnails/1344/323/310/172/5.png)](https://www.curseforge.com/wow/addons/minimalminimap)
 
-A lightweight addon that replaces the default World of Warcraft minimap with a clean, square version. Support on Classic Era / TBC Anniversary
+A lightweight addon that replaces the default World of Warcraft minimap with a clean, square version. 
+Supported on Classic Era / TBC Anniversary
 
 ---
 
