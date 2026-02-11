@@ -13,6 +13,57 @@ local function formatScale(value)
     return math.floor(value * 100 + 0.5) / 100
 end
 
+local function ensureGUIPositionTable(db)
+    if type(db.GUI_POSITION) ~= "table" then
+        db.GUI_POSITION = {}
+    end
+    return db.GUI_POSITION
+end
+
+local function saveGUIPosition(frame)
+    if not frame then return end
+    local db = getDB()
+    if not db then return end
+
+    local pos = ensureGUIPositionTable(db)
+
+    if MinimalMiniMap.GetAbsoluteCenter then
+        local absX, absY = MinimalMiniMap:GetAbsoluteCenter(frame)
+        if absX and absY then
+            pos.centerX = absX
+            pos.centerY = absY
+        end
+    end
+
+    local point, _, relativePoint, xOfs, yOfs = frame:GetPoint()
+    if point then
+        pos.point = point
+        pos.relativePoint = relativePoint or point
+        pos.x = xOfs or 0
+        pos.y = yOfs or 0
+    end
+end
+
+local function applyGUIPosition(frame)
+    if not frame then return end
+    local db = getDB()
+    if not db then return end
+
+    local pos = ensureGUIPositionTable(db)
+    frame:ClearAllPoints()
+
+    if pos.centerX and pos.centerY and MinimalMiniMap.SetAbsoluteCenter then
+        MinimalMiniMap:SetAbsoluteCenter(frame, pos.centerX, pos.centerY)
+        return
+    end
+
+    local point = pos.point or "CENTER"
+    local relativePoint = pos.relativePoint or point
+    local x = pos.x or 0
+    local y = pos.y or 0
+    frame:SetPoint(point, UIParent, relativePoint, x, y)
+end
+
 function MinimalMiniMap:EnsureGUI()
     if state.guiFrame then return state.guiFrame end
     return self:CreateGUI()
@@ -47,15 +98,63 @@ function MinimalMiniMap:CreateGUI()
         applyFont(_G[name .. "Text"], textSize)
     end
 
+    local function applySliderStyle(slider)
+        if not slider or slider.__MMMStyled then return end
+
+        local track = slider:CreateTexture(nil, "BACKGROUND")
+        track:SetColorTexture(0.05, 0.05, 0.05, 0.85)
+        track:SetHeight(6)
+        track:SetPoint("LEFT", slider, "LEFT", 8, 0)
+        track:SetPoint("RIGHT", slider, "RIGHT", -8, 0)
+
+        local fill = slider:CreateTexture(nil, "ARTWORK")
+        fill:SetColorTexture(1, 0.82, 0, 0.9)
+        fill:SetPoint("LEFT", track, "LEFT", 0, 0)
+        fill:SetHeight(6)
+
+        local function updateFill(self)
+            local minVal, maxVal = self:GetMinMaxValues()
+            local value = self:GetValue()
+            if not minVal or not maxVal or maxVal == minVal then
+                fill:SetWidth(1)
+                return
+            end
+
+            local ratio = (value - minVal) / (maxVal - minVal)
+            if ratio < 0 then ratio = 0 end
+            if ratio > 1 then ratio = 1 end
+
+            local width = track:GetWidth() * ratio
+            if width < 1 then width = 1 end
+            fill:SetWidth(width)
+        end
+
+        slider:HookScript("OnValueChanged", function(self)
+            updateFill(self)
+        end)
+        slider:HookScript("OnShow", function(self)
+            updateFill(self)
+        end)
+        slider:HookScript("OnSizeChanged", function(self)
+            updateFill(self)
+        end)
+
+        slider.__MMMStyled = true
+        updateFill(slider)
+    end
+
     local frame = CreateFrame("Frame", "MinimalMiniMapGUI", UIParent)
     frame:SetSize(400, 380)
-    frame:SetPoint("CENTER")
+    applyGUIPosition(frame)
     frame:Hide()
     frame:SetMovable(true)
     frame:EnableMouse(true)
     frame:RegisterForDrag("LeftButton")
     frame:SetScript("OnDragStart", function(self) self:StartMoving() end)
-    frame:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
+    frame:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing()
+        saveGUIPosition(self)
+    end)
     frame:SetClampedToScreen(true)
 
     -- Background
@@ -320,6 +419,7 @@ function MinimalMiniMap:CreateGUI()
     scaleSlider:SetObeyStepOnDrag(true)
     scaleSlider:SetValue(db.MM_SCALE)
     applySliderFonts(scaleSlider, 10)
+    applySliderStyle(scaleSlider)
     MMMScaleSliderLow:SetText("0.5")
     MMMScaleSliderHigh:SetText("2")
     MMMScaleSliderText:SetText("Scale: " .. db.MM_SCALE)
@@ -339,6 +439,7 @@ function MinimalMiniMap:CreateGUI()
     opacitySlider:SetObeyStepOnDrag(true)
     opacitySlider:SetValue(db.BORDER_OPACITY)
     applySliderFonts(opacitySlider, 10)
+    applySliderStyle(opacitySlider)
     MMMOpacitySliderLow:SetText("0")
     MMMOpacitySliderHigh:SetText("1")
     MMMOpacitySliderText:SetText("Border: " .. db.BORDER_OPACITY)
@@ -365,6 +466,7 @@ function MinimalMiniMap:CreateGUI()
     zoneTextYSlider:SetObeyStepOnDrag(true)
     zoneTextYSlider:SetValue(db.ZONE_TEXT_Y)
     applySliderFonts(zoneTextYSlider, 10)
+    applySliderStyle(zoneTextYSlider)
     MMMZoneTextYSliderLow:SetText("-50")
     MMMZoneTextYSliderHigh:SetText("50")
     MMMZoneTextYSliderText:SetText("Position: " .. db.ZONE_TEXT_Y)
@@ -384,6 +486,7 @@ function MinimalMiniMap:CreateGUI()
     zoneFontSlider:SetObeyStepOnDrag(true)
     zoneFontSlider:SetValue(db.ZONE_TEXT_FONT_SIZE)
     applySliderFonts(zoneFontSlider, 10)
+    applySliderStyle(zoneFontSlider)
     MMMZoneFontSliderLow:SetText("8")
     MMMZoneFontSliderHigh:SetText("24")
     MMMZoneFontSliderText:SetText("Font Size: " .. db.ZONE_TEXT_FONT_SIZE)
@@ -410,6 +513,7 @@ function MinimalMiniMap:CreateGUI()
     clockYSlider:SetObeyStepOnDrag(true)
     clockYSlider:SetValue(db.CLOCK_Y)
     applySliderFonts(clockYSlider, 10)
+    applySliderStyle(clockYSlider)
     MMMClockYSliderLow:SetText("-50")
     MMMClockYSliderHigh:SetText("50")
     MMMClockYSliderText:SetText("Position: " .. db.CLOCK_Y)
@@ -429,6 +533,7 @@ function MinimalMiniMap:CreateGUI()
     clockFontSlider:SetObeyStepOnDrag(true)
     clockFontSlider:SetValue(db.CLOCK_FONT_SIZE)
     applySliderFonts(clockFontSlider, 10)
+    applySliderStyle(clockFontSlider)
     MMMClockFontSliderLow:SetText("8")
     MMMClockFontSliderHigh:SetText("24")
     MMMClockFontSliderText:SetText("Font Size: " .. db.CLOCK_FONT_SIZE)
@@ -448,6 +553,7 @@ function MinimalMiniMap:CreateGUI()
     clockBgSlider:SetObeyStepOnDrag(true)
     clockBgSlider:SetValue(db.CLOCK_BG_OPACITY or 0.5)
     applySliderFonts(clockBgSlider, 10)
+    applySliderStyle(clockBgSlider)
     MMMClockBgSliderLow:SetText("0")
     MMMClockBgSliderHigh:SetText("1")
     MMMClockBgSliderText:SetText("BG Opacity: " .. (db.CLOCK_BG_OPACITY or 0.5))
@@ -494,6 +600,7 @@ function MinimalMiniMap:CreateGUI()
     buffScaleSlider:SetObeyStepOnDrag(true)
     buffScaleSlider:SetValue(db.BUFF_SCALE)
     applySliderFonts(buffScaleSlider, 12)
+    applySliderStyle(buffScaleSlider)
     MMMBuffScaleSliderLow:SetText("0.5")
     MMMBuffScaleSliderHigh:SetText("2")
     MMMBuffScaleSliderText:SetText("Buff Scale: " .. db.BUFF_SCALE)
@@ -577,6 +684,12 @@ StaticPopupDialogs["MINIMALMINIMAP_RESET_ALL"] = {
             x = defaults.POSITION.x,
             y = defaults.POSITION.y,
         }
+        db.GUI_POSITION = {
+            point = defaults.GUI_POSITION.point,
+            relativePoint = defaults.GUI_POSITION.relativePoint,
+            x = defaults.GUI_POSITION.x,
+            y = defaults.GUI_POSITION.y,
+        }
         db.BUFF_SCALE = defaults.BUFF_SCALE
         db.BUFF_UNLOCKED = defaults.BUFF_UNLOCKED
         db.BUFF_POSITION = {
@@ -599,6 +712,9 @@ StaticPopupDialogs["MINIMALMINIMAP_RESET_ALL"] = {
         end
         if state.guiFrame and state.guiFrame.fpsCheck then
             state.guiFrame.fpsCheck:SetChecked(db.SHOW_FPS)
+        end
+        if state.guiFrame then
+            applyGUIPosition(state.guiFrame)
         end
         
         -- Apply all changes

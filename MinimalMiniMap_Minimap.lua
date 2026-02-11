@@ -10,6 +10,140 @@ end
 local state = MinimalMiniMap:GetState()
 state.drag = state.drag or { active = false, offsetX = 0, offsetY = 0 }
 
+local function forceHideFrame(frame)
+    if not frame then return end
+    frame:Hide()
+    if frame.__MMMOnShowHooked then return end
+    frame:HookScript("OnShow", function(self)
+        self:Hide()
+    end)
+    frame.__MMMOnShowHooked = true
+end
+
+local function stripTextureRegions(frame)
+    if not frame then return end
+    local regions = { frame:GetRegions() }
+    for _, region in ipairs(regions) do
+        if region and region.GetObjectType and region:GetObjectType() == "Texture" then
+            region:SetTexture(nil)
+            region:SetAlpha(0)
+        end
+    end
+end
+
+local function forceHideTexture(texture)
+    if not texture then return end
+    texture:Hide()
+    texture:SetTexture(nil)
+    texture:SetAlpha(0)
+    if texture.__MMMOnShowHooked then return end
+    texture:HookScript("OnShow", function(self)
+        self:Hide()
+        self:SetTexture(nil)
+        self:SetAlpha(0)
+    end)
+    texture.__MMMOnShowHooked = true
+end
+
+local function forceHideObject(object)
+    if not object then return end
+    if object.GetObjectType and object:GetObjectType() == "Texture" then
+        forceHideTexture(object)
+    else
+        forceHideFrame(object)
+        stripTextureRegions(object)
+    end
+end
+
+local function stripMinimapBackdropArt()
+    local backdrop = _G.MinimapBackdrop
+    if not backdrop then return end
+
+    local function stripBackdrop(self)
+        stripTextureRegions(self)
+        if self.SetBackdrop then
+            self:SetBackdrop(nil)
+        end
+    end
+
+    stripBackdrop(backdrop)
+
+    if backdrop.__MMMStripHooked then return end
+    backdrop:HookScript("OnShow", function(self)
+        stripBackdrop(self)
+    end)
+    backdrop.__MMMStripHooked = true
+end
+
+local function applyTopCapsuleFix()
+    forceHideTexture(MinimapBorderTop)
+    stripMinimapBackdropArt()
+    if MinimapCluster then
+        forceHideObject(MinimapCluster.BorderTop)
+    end
+end
+
+local function clearButtonTexture(texture)
+    if not texture then return end
+    texture:SetTexture(nil)
+    texture:SetAlpha(0)
+    texture:Hide()
+end
+
+local function stripTextureRegionsDeep(frame)
+    if not frame then return end
+    stripTextureRegions(frame)
+    local children = { frame:GetChildren() }
+    for _, child in ipairs(children) do
+        stripTextureRegions(child)
+    end
+end
+
+local function clearZoneTextButtonArt()
+    if not MinimapZoneTextButton then return end
+
+    stripTextureRegionsDeep(MinimapZoneTextButton)
+
+    if MinimapZoneTextButton.GetNormalTexture then
+        clearButtonTexture(MinimapZoneTextButton:GetNormalTexture())
+    end
+    if MinimapZoneTextButton.GetPushedTexture then
+        clearButtonTexture(MinimapZoneTextButton:GetPushedTexture())
+    end
+    if MinimapZoneTextButton.GetHighlightTexture then
+        clearButtonTexture(MinimapZoneTextButton:GetHighlightTexture())
+    end
+
+    clearButtonTexture(_G.MinimapZoneTextButtonLeft)
+    clearButtonTexture(_G.MinimapZoneTextButtonMiddle)
+    clearButtonTexture(_G.MinimapZoneTextButtonRight)
+end
+
+local function ensureStandaloneZoneText()
+    if not Minimap or not MinimapZoneText then return end
+    local state = MinimalMiniMap:GetState()
+    if state.zoneTextDetached then return end
+
+    if MinimapZoneText.SetParent then
+        MinimapZoneText:SetParent(Minimap)
+    end
+    if MinimapZoneText.SetFrameStrata then
+        MinimapZoneText:SetFrameStrata("HIGH")
+    end
+    if MinimapZoneText.SetFrameLevel and Minimap.GetFrameLevel then
+        MinimapZoneText:SetFrameLevel(Minimap:GetFrameLevel() + 10)
+    end
+
+    if MinimapZoneTextButton then
+        if MinimapZoneTextButton.EnableMouse then
+            MinimapZoneTextButton:EnableMouse(false)
+        end
+        forceHideFrame(MinimapZoneTextButton)
+    end
+
+    state.zoneTextDetached = true
+end
+
 local function getFontPath()
     local db = getDB()
     local fontChoice = db and db.FONT or "MMM"
@@ -109,38 +243,48 @@ end
 function MinimalMiniMap:ApplyBorderTexture(frame)
     if not frame then return end
     local media = self:GetMedia()
-    frame:SetTexture(media.texture)
     local db = getDB()
     local alpha = db and db.BORDER_OPACITY or 0.1
+    frame:SetTexture(media.texture)
     frame:SetAlpha(alpha)
     frame:Show()
 end
 
 function MinimalMiniMap:ApplyBorder()
     self:ApplyBorderTexture(MinimapBorder)
-    self:ApplyBorderTexture(MinimapBorderTop)
+    -- Keep the default top capsule pieces hidden for both TBC and Classic paths.
+    applyTopCapsuleFix()
 end
 
 function MinimalMiniMap:ApplyButtons()
     local db = getDB()
     if not db or not db.BUTTONS then return end
-    local hide = {
+    local hideFrames = {
         MinimapZoomIn,
         MinimapZoomOut,
         MinimapToggleButton,
-        MinimapBorderTop,
         MiniMapWorldMapButton,
     }
-    for _, frame in ipairs(hide) do
-        if frame then frame:Hide() end
+    for _, frame in ipairs(hideFrames) do
+        forceHideFrame(frame)
     end
 end
 
 local function ShowZoneTextButton()
+    local state = MinimalMiniMap:GetState()
+    if state.zoneTextDetached then
+        if MinimapZoneText then MinimapZoneText:Show() end
+        return
+    end
     if MinimapZoneTextButton then MinimapZoneTextButton:Show() end
 end
 
 local function HideZoneTextButton()
+    local state = MinimalMiniMap:GetState()
+    if state.zoneTextDetached then
+        if MinimapZoneText then MinimapZoneText:Hide() end
+        return
+    end
     if MinimapZoneTextButton then MinimapZoneTextButton:Hide() end
 end
 
@@ -167,51 +311,131 @@ end
 
 function MinimalMiniMap:ApplyZoneText()
     local db = getDB()
+    ensureStandaloneZoneText()
+    if MinimapZoneTextButton then
+        clearZoneTextButtonArt()
+        if not MinimapZoneTextButton.__MMMStripHooked then
+            MinimapZoneTextButton:HookScript("OnShow", function(self)
+                clearZoneTextButtonArt()
+            end)
+            MinimapZoneTextButton.__MMMStripHooked = true
+        end
+    end
     if MinimapZoneTextButton and Minimap and db then
         MinimapZoneTextButton:SetPoint("TOP", Minimap, "TOP", 0, db.ZONE_TEXT_Y or 2)
     end
     if MinimapZoneText then
         local fontSize = db and db.ZONE_TEXT_FONT_SIZE or 11
+        MinimapZoneText:ClearAllPoints()
+        MinimapZoneText:SetPoint("TOP", Minimap, "TOP", 0, db and db.ZONE_TEXT_Y or 2)
         MinimapZoneText:SetFont(getFontPath(), fontSize, "OUTLINE")
+        MinimapZoneText:SetDrawLayer("OVERLAY")
+        MinimapZoneText:SetJustifyH("CENTER")
+        MinimapZoneText:SetShadowOffset(0, 0)
+        MinimapZoneText:SetShadowColor(0, 0, 0, 0)
+        MinimapZoneText:SetTextColor(1, 0.82, 0, 1)
     end
 end
 
 function MinimalMiniMap:ApplyClock()
     local db = getDB()
-    local media = self:GetMedia()
     local state = self:GetState()
-    
-    if TimeManagerClockButton and Minimap and db then
-        TimeManagerClockButton:SetPoint("BOTTOM", Minimap, "BOTTOM", 0, db.CLOCK_Y or -2)
-        TimeManagerClockButton:SetFrameStrata("HIGH")
-        TimeManagerClockButton:SetFrameLevel(Minimap:GetFrameLevel() + 10)
-        local region = TimeManagerClockButton:GetRegions()
+    if not Minimap or not db then return end
+
+    -- TBC 2.5.5 clock lives in Blizzard_TimeManager and may be LoD.
+    if (not TimeManagerClockButton or not TimeManagerClockTicker) and LoadAddOn and IsAddOnLoaded then
+        if not IsAddOnLoaded("Blizzard_TimeManager") then
+            pcall(LoadAddOn, "Blizzard_TimeManager")
+        end
+    end
+
+    if not state.fallbackClockButton then
+        local btn = CreateFrame("Frame", "MinimalMiniMapClockFrame", Minimap)
+        btn:SetFrameStrata("HIGH")
+        btn:SetFrameLevel(Minimap:GetFrameLevel() + 10)
+        btn:SetSize(1, 1)
+        btn:EnableMouse(false)
+
+        local ticker = btn:CreateFontString(nil, "OVERLAY")
+        ticker:SetPoint("CENTER", btn, "CENTER", 0, 0)
+
+        local bg = btn:CreateTexture(nil, "BACKGROUND")
+        bg:SetPoint("CENTER", ticker, "CENTER", 0, 0)
+
+        state.fallbackClockButton = btn
+        state.fallbackClockTicker = ticker
+        state.fallbackClockBackground = bg
+    end
+
+    local nativeClockButton = _G.TimeManagerClockButton
+    local nativeClockTicker = _G.TimeManagerClockTicker
+
+    local clockTicker = nativeClockTicker or state.fallbackClockTicker
+    local clockBackground = nil
+
+    if nativeClockButton and nativeClockTicker then
+        nativeClockButton:SetPoint("BOTTOM", Minimap, "BOTTOM", 0, db.CLOCK_Y or -2)
+        nativeClockButton:SetFrameStrata("HIGH")
+        nativeClockButton:SetFrameLevel(Minimap:GetFrameLevel() + 10)
+        local region = nativeClockButton:GetRegions()
         if region then region:Hide() end
-        
-        -- Create background for clock if it doesn't exist
+
         if not state.clockBackground then
-            local bg = TimeManagerClockButton:CreateTexture(nil, "BACKGROUND")
-            state.clockBackground = bg
+            state.clockBackground = nativeClockButton:CreateTexture(nil, "BACKGROUND")
         end
-        
-        -- Update background opacity and size
-        if TimeManagerClockTicker and state.clockBackground then
-            local bgOpacity = db.CLOCK_BG_OPACITY or 0.5
-            state.clockBackground:SetColorTexture(0, 0, 0, bgOpacity)
-            local width = TimeManagerClockTicker:GetStringWidth() + 8
-            local height = TimeManagerClockTicker:GetStringHeight() + 4
-            state.clockBackground:SetSize(width, height)
-            state.clockBackground:SetPoint("CENTER", TimeManagerClockTicker, "CENTER", 0, 0)
+        clockBackground = state.clockBackground
+
+        if state.fallbackClockButton then
+            state.fallbackClockButton:Hide()
         end
+
+        if not state.nativeClockUpdateHooked and hooksecurefunc and type(TimeManagerClockButton_Update) == "function" then
+            hooksecurefunc("TimeManagerClockButton_Update", function()
+                MinimalMiniMap:UpdateClockText()
+            end)
+            state.nativeClockUpdateHooked = true
+        end
+    elseif state.fallbackClockButton then
+        state.fallbackClockButton:ClearAllPoints()
+        state.fallbackClockButton:SetPoint("BOTTOM", Minimap, "BOTTOM", 0, db.CLOCK_Y or -2)
+        state.fallbackClockButton:Show()
+        clockBackground = state.fallbackClockBackground
     end
-    
-    if TimeManagerClockTicker then
-        local fontSize = db and db.CLOCK_FONT_SIZE or 12
-        TimeManagerClockTicker:SetFont(getFontPath(), fontSize, "OUTLINE")
+
+    if clockTicker then
+        local fontSize = db.CLOCK_FONT_SIZE or 12
+        clockTicker:SetFont(getFontPath(), fontSize, "OUTLINE")
     end
-    
-    -- Initialize FPS tracking
+
+    if clockBackground and clockTicker then
+        local bgOpacity = db.CLOCK_BG_OPACITY or 0.5
+        clockBackground:SetColorTexture(0, 0, 0, bgOpacity)
+        local width = clockTicker:GetStringWidth() + 8
+        local height = clockTicker:GetStringHeight() + 4
+        clockBackground:SetSize(width, height)
+        clockBackground:SetPoint("CENTER", clockTicker, "CENTER", 0, 0)
+        clockBackground:Show()
+    end
+
+    state.activeClockTicker = clockTicker
+    state.activeClockBackground = clockBackground
+
+    if not state.clockUpdater then
+        state.clockUpdater = CreateFrame("Frame")
+        state.clockUpdateElapsed = 0
+        state.clockUpdater:SetScript("OnUpdate", function(_, elapsed)
+            local cfg = getDB()
+            local interval = (cfg and cfg.SHOW_FPS) and 0.5 or 1.0
+            state.clockUpdateElapsed = state.clockUpdateElapsed + elapsed
+            if state.clockUpdateElapsed >= interval then
+                state.clockUpdateElapsed = 0
+                MinimalMiniMap:UpdateClockText()
+            end
+        end)
+    end
+
     self:InitializeFPSTracking()
+    self:UpdateClockText()
 end
 
 function MinimalMiniMap:InitializeFPSTracking()
@@ -221,60 +445,23 @@ function MinimalMiniMap:InitializeFPSTracking()
     if not state.fpsTracker then
         state.fpsTracker = {
             frameCount = 0,
-            lastTime = GetTime(),
             currentFPS = 0,
             lastUpdate = 0
         }
     end
     
-    -- Stop existing timer if it exists
-    if state.fpsTimer then
-        state.fpsTimer:Cancel()
-        state.fpsTimer = nil
-    end
-    
-    -- Only start FPS tracking if enabled
     if db and db.SHOW_FPS then
-        -- Create a frame for FPS tracking if it doesn't exist
         if not state.fpsFrame then
             state.fpsFrame = CreateFrame("Frame")
         end
-        
-        -- Set up OnUpdate for FPS tracking
-        state.fpsFrame:SetScript("OnUpdate", function(self, elapsed)
+
+        state.fpsFrame:SetScript("OnUpdate", function(_, elapsed)
             MinimalMiniMap:UpdateFPS(elapsed)
         end)
-        
-        -- Hook SetText to prevent other addons/systems from overriding
-        if not state.clockTextHooked and TimeManagerClockTicker then
-            state.originalSetText = TimeManagerClockTicker.SetText
-            TimeManagerClockTicker.SetText = function(self, text)
-                -- Only allow our FPS text through
-                if db.SHOW_FPS and state.fpsTracker and text and not string.find(text, "FPS") then
-                    local fps = math.floor(state.fpsTracker.currentFPS + 0.5)
-                    text = text .. " - " .. fps .. " FPS"
-                end
-                state.originalSetText(self, text)
-            end
-            state.clockTextHooked = true
-        end
-        
-        -- Initial text update
-        self:UpdateClockText()
     else
-        -- Stop FPS tracking
         if state.fpsFrame then
             state.fpsFrame:SetScript("OnUpdate", nil)
         end
-        
-        -- Restore original SetText function
-        if state.clockTextHooked and state.originalSetText and TimeManagerClockTicker then
-            TimeManagerClockTicker.SetText = state.originalSetText
-            state.clockTextHooked = false
-        end
-        
-        -- Reset clock text to time only
-        self:UpdateClockText()
     end
 end
 
@@ -302,16 +489,17 @@ end
 function MinimalMiniMap:UpdateClockText()
     local db = getDB()
     local state = self:GetState()
-    
-    if not TimeManagerClockTicker or not db then return end
+    local ticker = _G.TimeManagerClockTicker or state.activeClockTicker or state.fallbackClockTicker
+
+    if not ticker or not db then return end
     
     -- Get the original time text - try different methods for Classic Era
     local timeText = ""
     if GameTime_GetTime then
         timeText = GameTime_GetTime(false)
-    elseif TimeManagerClockTicker.timeDisplayFormat then
+    elseif ticker.timeDisplayFormat then
         -- Fallback: get current time format
-        timeText = date(TimeManagerClockTicker.timeDisplayFormat or "%H:%M")
+        timeText = date(ticker.timeDisplayFormat or "%H:%M")
     else
         -- Last resort: simple time format
         timeText = date("%H:%M")
@@ -323,14 +511,14 @@ function MinimalMiniMap:UpdateClockText()
     end
     
     -- Force set the text and ensure it's visible
-    TimeManagerClockTicker:SetText(timeText)
-    TimeManagerClockTicker:Show()
-    
-    -- Update background size if it exists
-    if state.clockBackground then
-        local width = TimeManagerClockTicker:GetStringWidth() + 8
-        local height = TimeManagerClockTicker:GetStringHeight() + 4
-        state.clockBackground:SetSize(width, height)
+    ticker:SetText(timeText)
+    ticker:Show()
+
+    local bg = state.clockBackground or state.activeClockBackground or state.fallbackClockBackground
+    if bg then
+        local width = ticker:GetStringWidth() + 8
+        local height = ticker:GetStringHeight() + 4
+        bg:SetSize(width, height)
     end
 end
 
@@ -482,6 +670,9 @@ function MinimalMiniMap:ApplyVisibility()
     
     -- Settings Cogwheel - bottom right
     self:CreateSettingsButton()
+
+    -- TBC/Classic: keep default top capsule pieces hidden.
+    applyTopCapsuleFix()
 end
 
 function MinimalMiniMap:CreateSettingsButton()
@@ -531,3 +722,5 @@ function MinimalMiniMap:CreateSettingsButton()
     
     state.settingsButton = btn
 end
+
+

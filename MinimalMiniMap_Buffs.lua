@@ -14,10 +14,23 @@ function MinimalMiniMap:SaveBuffPositionFrom(frame)
     local db = getDB()
     if not db then return end
 
+    local pos = db.BUFF_POSITION
+    if type(pos) ~= "table" then
+        pos = {}
+        db.BUFF_POSITION = pos
+    end
+
+    if self.GetAbsoluteCenter then
+        local absX, absY = self:GetAbsoluteCenter(frame)
+        if absX and absY then
+            pos.centerX = absX
+            pos.centerY = absY
+        end
+    end
+
     local point, _, relativePoint, xOfs, yOfs = frame:GetPoint()
     if not point then return end
 
-    local pos = db.BUFF_POSITION
     pos.point = point
     pos.relativePoint = relativePoint or point
     pos.x = xOfs or 0
@@ -30,6 +43,15 @@ function MinimalMiniMap:ApplyBuffPosition()
     if not db then return end
 
     local pos = db.BUFF_POSITION
+    if type(pos) ~= "table" then
+        pos = {}
+        db.BUFF_POSITION = pos
+    end
+    if self.SetAbsoluteCenter and pos.centerX and pos.centerY then
+        self:SetAbsoluteCenter(BuffFrame, pos.centerX, pos.centerY)
+        return
+    end
+
     local point = pos.point or "TOPRIGHT"
     local relativePoint = pos.relativePoint or point
     local x = pos.x or -200
@@ -55,6 +77,7 @@ local function finishBuffDrag(frame)
         frame:StopMovingOrSizing()
         frame.__MinimalMiniMapIsMoving = nil
         MinimalMiniMap:SaveBuffPositionFrom(frame)
+        -- Reapply from saved position to normalize anchoring and avoid snapback.
         MinimalMiniMap:ApplyBuffPosition()
     end
 end
@@ -73,6 +96,7 @@ function MinimalMiniMap:EnableBuffDragging()
     BuffFrame:SetScript("OnDragStart", function(frame)
         local db = getDB()
         if db and db.BUFF_UNLOCKED then
+            MinimalMiniMap:DetachBuffsFromMinimap()
             frame:StartMoving()
             frame.__MinimalMiniMapIsMoving = true
         else

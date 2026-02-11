@@ -39,6 +39,12 @@ MinimalMiniMap.defaults = {
 		x = -5,
 		y = -10,
 	},
+	GUI_POSITION = {
+		point = "CENTER",
+		relativePoint = "CENTER",
+		x = 0,
+		y = 0,
+	},
 	UNLOCKED = false,
 	BUFF_UNLOCKED = false,
 	BUFF_POSITION = {
@@ -151,6 +157,17 @@ frame:SetScript("OnEvent", function(_, event)
 		MinimalMiniMap:ApplyCore()
 		frame:UnregisterEvent(event)
 	elseif event == "ZONE_CHANGED_NEW_AREA" or event == "ZONE_CHANGED" then
+		-- Reapply minimap skin in case Blizzard UI refreshes zone/top art on transitions
+		if MinimalMiniMap.ApplyBorder then
+			MinimalMiniMap:ApplyBorder()
+		end
+		if MinimalMiniMap.ApplyButtons then
+			MinimalMiniMap:ApplyButtons()
+		end
+		if MinimalMiniMap.ApplyZoneText then
+			MinimalMiniMap:ApplyZoneText()
+		end
+
 		-- Reapply buff position when changing zones
 		if MinimalMiniMap.DetachBuffsFromMinimap then
 			MinimalMiniMap:DetachBuffsFromMinimap()
