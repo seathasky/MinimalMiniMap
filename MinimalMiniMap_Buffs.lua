@@ -127,8 +127,13 @@ function MinimalMiniMap:ApplyBuffUnlockState()
 
     local unlocked = db.BUFF_UNLOCKED
     if unlocked then
+        BuffFrame:EnableMouse(true)
+        BuffFrame:RegisterForDrag("LeftButton")
         if state.buffOverlay then state.buffOverlay:Show() end
     else
+        finishBuffDrag(BuffFrame)
+        BuffFrame:EnableMouse(false)
+        BuffFrame:RegisterForDrag()
         if state.buffOverlay then state.buffOverlay:Hide() end
     end
 

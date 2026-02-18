@@ -1,7 +1,7 @@
 ## Interface: 20505
 ## Title: MinimalMiniMap (TBC)
 ## Author: Seathasky
-## Version: 1.6
+## Version: 1.7
 ## Notes: Just a simple minimap for TBC Classic Anniversary
 ## SavedVariables: MinimalMiniMapDB
 
