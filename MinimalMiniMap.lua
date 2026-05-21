@@ -154,8 +154,20 @@ end
 frame:SetScript("OnEvent", function(_, event)
 	if event == "PLAYER_ENTERING_WORLD" then
 		MinimalMiniMap:InitDB()
-		MinimalMiniMap:ApplyCore()
-		frame:UnregisterEvent(event)
+		local state = MinimalMiniMap:GetState()
+		if not state.coreApplied then
+			MinimalMiniMap:ApplyCore()
+			state.coreApplied = true
+		end
+
+		-- Zone transfers (like entering instances) can cause Blizzard to re-anchor
+		-- the minimap cluster, so always restore our saved position/state.
+		if MinimalMiniMap.ApplyPosition then
+			MinimalMiniMap:ApplyPosition()
+		end
+		if MinimalMiniMap.ApplyUnlockState then
+			MinimalMiniMap:ApplyUnlockState()
+		end
 	elseif event == "ZONE_CHANGED_NEW_AREA" or event == "ZONE_CHANGED" then
 		-- Reapply minimap skin in case Blizzard UI refreshes zone/top art on transitions
 		if MinimalMiniMap.ApplyBorder then
@@ -166,6 +178,9 @@ frame:SetScript("OnEvent", function(_, event)
 		end
 		if MinimalMiniMap.ApplyZoneText then
 			MinimalMiniMap:ApplyZoneText()
+		end
+		if MinimalMiniMap.ApplyPosition then
+			MinimalMiniMap:ApplyPosition()
 		end
 
 		-- Reapply buff position when changing zones

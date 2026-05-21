@@ -652,11 +652,26 @@ function MinimalMiniMap:ApplyVisibility()
         LFGMinimapFrame:SetPoint("BOTTOMLEFT", Minimap, "BOTTOMLEFT", 2, 2)
     end
     
-    -- Tracking Button - hide it
-    local trackingButton = MiniMapTracking or MiniMapTrackingButton
-    if trackingButton then
-        trackingButton:Hide()
-        trackingButton:SetScript("OnShow", function(self) self:Hide() end)
+    -- Tracking Button: keep Blizzard icon/behavior, but control size and position.
+    local trackingContainer = MiniMapTracking
+    local trackingButton = MiniMapTrackingButton or MiniMapTracking
+
+    if trackingContainer then
+        trackingContainer:Show()
+        trackingContainer:ClearAllPoints()
+        trackingContainer:SetPoint("TOPRIGHT", Minimap, "TOPRIGHT", -2, -2)
+        trackingContainer:SetScale(0.6)
+        trackingContainer:SetFrameStrata("HIGH")
+        trackingContainer:SetFrameLevel(Minimap:GetFrameLevel() + 10)
+    end
+
+    if trackingButton and trackingButton ~= trackingContainer then
+        trackingButton:Show()
+        trackingButton:ClearAllPoints()
+        trackingButton:SetPoint("CENTER", trackingContainer or Minimap, "CENTER", 0, 0)
+        trackingButton:SetScale(1)
+        trackingButton:SetFrameStrata("HIGH")
+        trackingButton:SetFrameLevel(Minimap:GetFrameLevel() + 11)
     end
     
     -- Mail Icon - middle right

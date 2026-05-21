@@ -64,6 +64,38 @@ local function applyGUIPosition(frame)
     frame:SetPoint(point, UIParent, relativePoint, x, y)
 end
 
+local function resolveAddonVersion(addonName)
+    local field = "Version"
+
+    if C_AddOns and C_AddOns.GetAddOnMetadata and addonName then
+        local value = C_AddOns.GetAddOnMetadata(addonName, field)
+        if value and value ~= "" then
+            return value
+        end
+    end
+
+    if GetAddOnMetadata and addonName then
+        local value = GetAddOnMetadata(addonName, field)
+        if value and value ~= "" then
+            return value
+        end
+    end
+
+    if GetNumAddOns and GetAddOnMetadata then
+        for i = 1, GetNumAddOns() do
+            local name = GetAddOnInfo and GetAddOnInfo(i)
+            if name == addonName then
+                local value = GetAddOnMetadata(i, field)
+                if value and value ~= "" then
+                    return value
+                end
+            end
+        end
+    end
+
+    return "?"
+end
+
 function MinimalMiniMap:EnsureGUI()
     if state.guiFrame then return state.guiFrame end
     return self:CreateGUI()
@@ -173,6 +205,14 @@ function MinimalMiniMap:CreateGUI()
     applyFont(frame.title, 16)
     frame.title:SetText(self.name)
     frame.title:SetTextColor(0.8, 0.8, 0.8)
+
+    local version = resolveAddonVersion(self.name)
+
+    frame.version = frame:CreateFontString(nil, "OVERLAY")
+    frame.version:SetPoint("TOPLEFT", frame, "TOPLEFT", 8, -8)
+    applyFont(frame.version, 11)
+    frame.version:SetText("v" .. version)
+    frame.version:SetTextColor(0.75, 0.75, 0.75, 0.4)
 
     -- Close button
     local closeBtn = CreateFrame("Button", nil, frame)
@@ -723,6 +763,7 @@ StaticPopupDialogs["MINIMALMINIMAP_RESET_ALL"] = {
         MinimalMiniMap:ApplyBorder()
         MinimalMiniMap:ApplyZoneText()
         MinimalMiniMap:ApplyClock()
+        MinimalMiniMap:ApplyVisibility()
         MinimalMiniMap:ApplyUnlockState()
         MinimalMiniMap:ApplyBuffScale()
         MinimalMiniMap:ApplyBuffPosition()

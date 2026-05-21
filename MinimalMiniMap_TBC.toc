@@ -1,8 +1,9 @@
 ## Interface: 20505
-## Title: MinimalMiniMap (TBC)
+## Title: Matt's Minimal Mini Map
 ## Author: Seathasky
-## Version: 1.7
+## Version: 1.9
 ## Notes: Just a simple minimap for TBC Classic Anniversary
+## IconTexture: Interface\AddOns\MinimalMiniMap\mmm
 ## SavedVariables: MinimalMiniMapDB
 
 MinimalMiniMap.lua
