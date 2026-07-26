@@ -178,6 +178,60 @@ function MinimalMiniMap:SetAbsoluteCenter(frame, absX, absY)
     frame:SetPoint("CENTER", UIParent, "BOTTOMLEFT", absX / scale, absY / scale)
 end
 
+function MinimalMiniMap:ClampFrameToScreen(frame, savePosition, boundsFrame)
+    if not frame or not UIParent then return false end
+    boundsFrame = boundsFrame or frame
+
+    local left, right = boundsFrame:GetLeft(), boundsFrame:GetRight()
+    local bottom, top = boundsFrame:GetBottom(), boundsFrame:GetTop()
+    if not left or not right or not bottom or not top then return false end
+
+    local frameScale = boundsFrame:GetEffectiveScale()
+    local uiScale = UIParent:GetEffectiveScale()
+    if not frameScale or frameScale == 0 then frameScale = 1 end
+    if not uiScale or uiScale == 0 then uiScale = 1 end
+
+    left, right = left * frameScale, right * frameScale
+    bottom, top = bottom * frameScale, top * frameScale
+
+    local screenLeft = (UIParent:GetLeft() or 0) * uiScale
+    local screenBottom = (UIParent:GetBottom() or 0) * uiScale
+    local screenRight = (UIParent:GetRight() or UIParent:GetWidth()) * uiScale
+    local screenTop = (UIParent:GetTop() or UIParent:GetHeight()) * uiScale
+
+    local shiftX, shiftY = 0, 0
+    if right - left > screenRight - screenLeft then
+        shiftX = ((screenLeft + screenRight) - (left + right)) / 2
+    elseif left < screenLeft then
+        shiftX = screenLeft - left
+    elseif right > screenRight then
+        shiftX = screenRight - right
+    end
+
+    if top - bottom > screenTop - screenBottom then
+        shiftY = ((screenBottom + screenTop) - (bottom + top)) / 2
+    elseif bottom < screenBottom then
+        shiftY = screenBottom - bottom
+    elseif top > screenTop then
+        shiftY = screenTop - top
+    end
+
+    if shiftX == 0 and shiftY == 0 then return false end
+
+    local centerX, centerY = self:GetAbsoluteCenter(frame)
+    if not centerX or not centerY then return false end
+    self:SetAbsoluteCenter(frame, centerX + shiftX, centerY + shiftY)
+
+    if savePosition then
+        if frame == MinimapCluster then
+            self:SavePositionFrom(frame)
+        elseif frame == BuffFrame and self.SaveBuffPositionFrom then
+            self:SaveBuffPositionFrom(frame)
+        end
+    end
+    return true
+end
+
 function MinimalMiniMap:GetCursorPositionInUI()
     local scale = UIParent:GetEffectiveScale()
     local x, y = GetCursorPosition()
@@ -215,6 +269,9 @@ function MinimalMiniMap:ApplyScale(preservePosition)
         self:SetAbsoluteCenter(MinimapCluster, absX, absY)
         self:SavePositionFrom(MinimapCluster)
     end
+    if preservePosition then
+        self:ClampFrameToScreen(MinimapCluster, true, Minimap)
+    end
 end
 
 function MinimalMiniMap:ApplyPosition()
@@ -233,6 +290,7 @@ function MinimalMiniMap:ApplyPosition()
         MinimapCluster:ClearAllPoints()
         MinimapCluster:SetPoint(point, UIParent, relativePoint, x, y)
     end
+    self:ClampFrameToScreen(MinimapCluster, true, Minimap)
 end
 
 function MinimalMiniMap:ApplyMask()
@@ -555,6 +613,7 @@ function MinimalMiniMap:UpdateDrag()
     local newTop = cursorY + state.drag.offsetY
     MinimapCluster:ClearAllPoints()
     MinimapCluster:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", newLeft, newTop)
+    self:ClampFrameToScreen(MinimapCluster, false, Minimap)
 end
 
 function MinimalMiniMap:StartDrag()
@@ -594,6 +653,9 @@ function MinimalMiniMap:EnableDragging()
 
     MinimapCluster:SetMovable(true)
     MinimapCluster:SetUserPlaced(true)
+    -- MinimapCluster includes invisible Blizzard layout space. Clamping that
+    -- frame creates a large visible gap, so clamp against the square Minimap
+    -- bounds ourselves instead.
     MinimapCluster:SetClampedToScreen(false)
 
     Minimap:HookScript("OnMouseDown", function(_, button)

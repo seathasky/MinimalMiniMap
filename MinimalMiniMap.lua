@@ -7,6 +7,8 @@ local frame = CreateFrame("Frame")
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 frame:RegisterEvent("ZONE_CHANGED")
+frame:RegisterEvent("DISPLAY_SIZE_CHANGED")
+frame:RegisterEvent("UI_SCALE_CHANGED")
 
 ---@diagnostic disable: undefined-global
 
@@ -167,6 +169,15 @@ frame:SetScript("OnEvent", function(_, event)
 		end
 		if MinimalMiniMap.ApplyUnlockState then
 			MinimalMiniMap:ApplyUnlockState()
+		end
+	elseif event == "DISPLAY_SIZE_CHANGED" or event == "UI_SCALE_CHANGED" then
+		-- UI scale and resolution changes alter the usable UIParent bounds. Restore
+		-- the saved physical positions, then pull both frames fully on-screen.
+		MinimalMiniMap:ApplyPosition()
+		MinimalMiniMap:ApplyBuffPosition()
+		if MinimalMiniMap.ClampFrameToScreen then
+			MinimalMiniMap:ClampFrameToScreen(MinimapCluster, true, Minimap)
+			MinimalMiniMap:ClampFrameToScreen(BuffFrame, true)
 		end
 	elseif event == "ZONE_CHANGED_NEW_AREA" or event == "ZONE_CHANGED" then
 		-- Reapply minimap skin in case Blizzard UI refreshes zone/top art on transitions

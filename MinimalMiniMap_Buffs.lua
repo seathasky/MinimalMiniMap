@@ -49,6 +49,9 @@ function MinimalMiniMap:ApplyBuffPosition()
     end
     if self.SetAbsoluteCenter and pos.centerX and pos.centerY then
         self:SetAbsoluteCenter(BuffFrame, pos.centerX, pos.centerY)
+        if self.ClampFrameToScreen then
+            self:ClampFrameToScreen(BuffFrame, true)
+        end
         return
     end
 
@@ -59,6 +62,9 @@ function MinimalMiniMap:ApplyBuffPosition()
 
     BuffFrame:ClearAllPoints()
     BuffFrame:SetPoint(point, UIParent, relativePoint, x, y)
+    if self.ClampFrameToScreen then
+        self:ClampFrameToScreen(BuffFrame, true)
+    end
 end
 
 function MinimalMiniMap:DetachBuffsFromMinimap()
@@ -89,7 +95,7 @@ function MinimalMiniMap:EnableBuffDragging()
 
     BuffFrame:SetMovable(true)
     BuffFrame:SetUserPlaced(true)
-    BuffFrame:SetClampedToScreen(false)
+    BuffFrame:SetClampedToScreen(true)
     BuffFrame:EnableMouse(true)
     BuffFrame:RegisterForDrag("LeftButton")
 
@@ -116,6 +122,9 @@ function MinimalMiniMap:ApplyBuffScale()
     
     local scale = db.BUFF_SCALE or 1.0
     BuffFrame:SetScale(scale)
+    if self.ClampFrameToScreen then
+        self:ClampFrameToScreen(BuffFrame, true)
+    end
 end
 
 function MinimalMiniMap:ApplyBuffUnlockState()
