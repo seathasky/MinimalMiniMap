@@ -1,7 +1,7 @@
-## Interface: 11508
+## Interface: 11509
 ## Title: Matt's Minimal Mini Map
 ## Author: Seathasky
-## Version: 1.9.2
+## Version: 1.9.3-hotfix
 ## X-Curse-Project-ID: 1357279
 ## Notes: Just a simple minimap for classic
 ## IconTexture: Interface\AddOns\MinimalMiniMap\mmm
